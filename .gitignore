@@ -1,0 +1,15 @@
+# Secrets — never commit these
+*.tfvars
+!*.tfvars.example
+*.env
+.env.*
+secrets/
+credentials/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Editor
+.vscode/
+*.swp
