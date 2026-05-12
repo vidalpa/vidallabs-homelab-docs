@@ -22,7 +22,7 @@ Pulse is a unified real-time dashboard for Proxmox (VMs, LXCs, PBS) and Docker S
              └── swarm-wrk-02 — Docker socket → container stats
 ```
 
-Data is stored on NFS at `/mnt/swarm-nfs/pulse` (persists across stack redeployments).
+Data is stored in a local Docker named volume (`pulse_pulse_data`) on swarm-mgr-01.
 
 ---
 
@@ -35,7 +35,8 @@ Pulse needs read-only API access to each Proxmox node. Create a dedicated user a
 ```bash
 # SSH to ghost002 or ghost003
 pveum user add pulse@pve --comment "Pulse monitoring"
-pveum role add PulseMonitor --privs "VM.Audit,VM.Monitor,Sys.Audit,Datastore.Audit,Pool.Audit"
+# VM.Monitor is not valid in PVE 7/8 — omit it
+pveum role add PulseMonitor --privs "VM.Audit,Sys.Audit,Datastore.Audit,Pool.Audit"
 pveum acl modify / --roles PulseMonitor --users pulse@pve
 ```
 
@@ -75,35 +76,38 @@ make pulse
 
 ### 2b. Verify the service is up
 
+The Pulse entrypoint runs `chown -R` on the entire `/app` tree on first start — this takes ~3 minutes.
+The service shows `0/1` during this window, which is normal.
+
 ```bash
 make pulse-status
 # Or: ssh linuxadmin@192.168.101.50 "docker service ps pulse_pulse"
 ```
 
-### 2c. Get the bootstrap token (first-time login)
+Wait until you see `1/1` replicas running, then open http://192.168.101.50:7655.
 
-```bash
-ssh linuxadmin@192.168.101.50 "docker exec \$(docker ps -q -f name=pulse_pulse) /app/pulse bootstrap-token"
-```
+### 2c. Login credentials
 
-Open http://192.168.101.50:7655, enter the bootstrap token, and complete the setup wizard.
+If `PULSE_AUTH_USER` and `PULSE_AUTH_PASS` were set during deploy, use those credentials directly.
+No bootstrap token setup wizard is required.
 
 ---
 
 ## Phase 3: Add Proxmox nodes in the UI
 
 1. Login to http://192.168.101.50:7655
-2. **Settings → Nodes → Add Node**
-3. Add each Proxmox node:
+2. **Settings → Proxmox → Virtual Environment → Add PVE Node**
+3. Select the **Manual** tab under "Quick Token Setup"
+4. Fill in:
+   - **Node Name:** `ghost002` (or any label)
+   - **Host URL:** `https://192.168.1.2:8006`
+   - **Token ID:** `pulse@pve!pulse`
+   - **Token Value:** `<secret from Phase 1>`
+   - **Verify SSL certificate:** unchecked (self-signed cert)
+5. Click **Test Connection** — you should see "Successfully connected to 3 node(s)"
+6. **Cluster auto-discovery fires automatically** — all 3 nodes (ghost002/003/005) are added in one step. No need to add them individually.
 
-| Node | Host | Port | Token ID | Token Secret |
-|------|------|------|----------|-------------|
-| ghost002 | 192.168.1.2 | 8006 | `pulse@pve!pulse` | `<secret>` |
-| ghost003 | 192.168.1.3 | 8006 | `pulse@pve!pulse` | `<secret>` |
-| ghost005 | 192.168.1.6 | 8006 | `pulse@pve!pulse` | `<secret>` |
-| PBS | 192.168.1.4 | 8007 | `pulse@pve!pulse` | `<secret>` |
-
-4. Toggle **"Ignore SSL certificate errors"** for self-signed certs on each node.
+> **Note:** If you see "A node with this host URL already exists" toast, that's fine — the node is already configured from a prior attempt. Click Cancel and verify the node list.
 
 ---
 
@@ -187,5 +191,9 @@ Verify in Pulse UI: **Settings → Agents** — each should show **Connected** w
 - Verify token is correct: `sudo cat /var/lib/pulse-agent/token`
 - Ensure port 7655 is reachable from the worker: `curl http://192.168.101.50:7655/api/health`
 
+**Pulse service restarts repeatedly (exit 137):**
+- If memory limit is too low, the `chown -R /app` during startup gets OOM-killed. Compose sets 1G limit — don't reduce it.
+- If `start_period` is too short (< 300s), the health check kills the container before `chown` finishes. Compose sets 300s — don't reduce it.
+
 **Pulse data lost after redeploy:**
-- Data is on NFS at `/mnt/swarm-nfs/pulse` — verify the NFS mount is up: `mount | grep swarm-nfs`
+- Data is in local Docker volume `pulse_pulse_data` on swarm-mgr-01. To back up: `docker run --rm -v pulse_pulse_data:/data busybox tar czf - /data`
