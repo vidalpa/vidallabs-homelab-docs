@@ -1,0 +1,278 @@
+###############################################################
+# Vidallabs — Network Diagram
+# Render: d2 diagram.d2 diagram.svg
+###############################################################
+
+direction: down
+
+###############################################################
+# WAN / Internet
+###############################################################
+
+isp1: "ISP 1 — Fiber\n1.9 Gbps ↑↓" {
+  shape: cloud
+  style.fill: "#e0f2fe"
+  style.stroke: "#0284c7"
+}
+
+isp2: "Astound — Cable\n406 Mbps ↓  /  35 Mbps ↑" {
+  shape: cloud
+  style.fill: "#fce7f3"
+  style.stroke: "#db2777"
+}
+
+###############################################################
+# Gateway
+###############################################################
+
+udm: "Dream Machine SE\n192.168.1.1  ·  WAN: 96.224.172.141" {
+  style.fill: "#1e40af"
+  style.font-color: "#ffffff"
+  style.border-radius: 6
+  style.bold: true
+}
+
+isp1 -> udm: "WAN1 (primary)" {
+  style.stroke: "#0284c7"
+  style.stroke-width: 2
+}
+isp2 -> udm: "WAN2 (failover)" {
+  style.stroke: "#db2777"
+  style.stroke-dash: 4
+}
+
+vpn: "WireGuard VPN\n192.168.4.0/24  ·  port 51820" {
+  shape: oval
+  style.fill: "#4c1d95"
+  style.font-color: "#ffffff"
+}
+udm -> vpn: "remote access"
+
+###############################################################
+# Core switch
+###############################################################
+
+core: "USW Pro Max 16 PoE\n192.168.1.136" {
+  style.fill: "#065f46"
+  style.font-color: "#ffffff"
+  style.border-radius: 4
+  style.bold: true
+}
+
+udm -> core: "trunk — all VLANs" {
+  style.stroke-width: 3
+}
+
+###############################################################
+# Infrastructure  (native VLAN)
+###############################################################
+
+infra: "Infrastructure  ·  native  ·  192.168.1.0/24" {
+  style.fill: "#f0fdf4"
+  style.stroke: "#16a34a"
+  style.border-radius: 8
+
+  proxmox: "Proxmox Cluster — Vidallabs" {
+    style.fill: "#dcfce7"
+    style.stroke: "#15803d"
+    style.border-radius: 6
+
+    ghost002: "ghost002\n192.168.1.2\nRyzen 7 5700U · 16 vCPU · 59.7 GB" {
+      style.fill: "#ffffff"
+    }
+    ghost003: "ghost003\n192.168.1.3\nRyzen 7 5825U · 16 vCPU · 27.3 GB" {
+      style.fill: "#ffffff"
+    }
+    ghost005: "ghost005\n192.168.1.6\nAMD PRO A10 · 4 vCPU · 15.1 GB" {
+      style.fill: "#ffffff"
+    }
+  }
+
+  storage: "Storage" {
+    style.fill: "#fef9c3"
+    style.stroke: "#ca8a04"
+    style.border-radius: 6
+
+    unas: "UNAS Pro\n192.168.1.221\n14.9 TB NFS (primary)" {
+      shape: cylinder
+      style.fill: "#fefce8"
+    }
+    truenas: "TrueNAS\n192.168.1.10\n3.3 TB NFS" {
+      shape: cylinder
+      style.fill: "#fefce8"
+    }
+    pbs: "Proxmox Backup Server\n192.168.1.4\n860 GB" {
+      shape: cylinder
+      style.fill: "#fefce8"
+    }
+  }
+
+  dns: "Pi-hole HA Cluster" {
+    style.fill: "#f3e8ff"
+    style.stroke: "#9333ea"
+    style.border-radius: 6
+
+    pihole1: "pihole-01\n192.168.1.5\nPrimary DNS" { style.fill: "#ffffff" }
+    pihole2: "pihole-02\n192.168.1.7\nSecondary DNS" { style.fill: "#ffffff" }
+    pihole3: "pihole-03\nTertiary DNS" { style.fill: "#ffffff" }
+  }
+
+  services: "Self-hosted Services" {
+    style.fill: "#fff7ed"
+    style.stroke: "#ea580c"
+    style.border-radius: 6
+
+    n8n: "n8n\n192.168.1.124:5678" { style.fill: "#ffffff" }
+    ha: "Home Assistant\n192.168.1.179" { style.fill: "#ffffff" }
+    urbackup: "URBackup\n192.168.1.235" { style.fill: "#ffffff" }
+    flowise: "FlowiseAI\nlxc 101" { style.fill: "#ffffff" }
+  }
+}
+
+core -> infra {
+  style.stroke: "#16a34a"
+  style.stroke-width: 2
+}
+
+###############################################################
+# k3s_net — VLAN 100
+###############################################################
+
+k3s: "k3s_net  ·  VLAN 100  ·  192.168.100.0/24" {
+  style.fill: "#eff6ff"
+  style.stroke: "#2563eb"
+  style.border-radius: 8
+
+  grafana: "Grafana\n192.168.100.12" { style.fill: "#ffffff" }
+  phpipam: "phpIPAM\n192.168.100.246" { style.fill: "#ffffff" }
+  pdm: "Proxmox DCM\n192.168.100.121" { style.fill: "#ffffff" }
+}
+
+core -> k3s: "VLAN 100" {
+  style.stroke: "#2563eb"
+}
+
+###############################################################
+# Vidallabs — VLAN 101 (Docker Swarm)
+###############################################################
+
+swarm: "Vidallabs  ·  VLAN 101  ·  192.168.101.0/24" {
+  style.fill: "#fdf4ff"
+  style.stroke: "#a855f7"
+  style.border-radius: 8
+
+  mgr: "swarm-mgr-01\n192.168.101.50\nPortainer :9443" { style.fill: "#ffffff" }
+  wrk1: "swarm-wrk-01\n192.168.101.51" { style.fill: "#ffffff" }
+  wrk2: "swarm-wrk-02\n192.168.101.52" { style.fill: "#ffffff" }
+  nfs_mount: "UNAS NFS mount\n192.168.101.221:/Swarm_NFS" {
+    shape: cylinder
+    style.fill: "#fdf4ff"
+  }
+
+  mgr -> wrk1: "swarm"
+  mgr -> wrk2: "swarm"
+}
+
+core -> swarm: "VLAN 101" {
+  style.stroke: "#a855f7"
+}
+
+###############################################################
+# wireless — VLAN 2
+###############################################################
+
+wireless: "wireless  ·  VLAN 2  ·  192.168.2.0/24" {
+  style.fill: "#f0f9ff"
+  style.stroke: "#0891b2"
+  style.border-radius: 8
+
+  u6pro: "U6 Pro — office\n192.168.1.215\n14 clients" { style.fill: "#ffffff" }
+  u7bela: "U7 Lite — Bela\n192.168.1.82\n11 clients" { style.fill: "#ffffff" }
+}
+
+core -> wireless: "VLAN 2" {
+  style.stroke: "#0891b2"
+}
+
+###############################################################
+# iOT_NET — VLAN 3 (isolated)
+###############################################################
+
+iot: "iOT_NET  ·  VLAN 3  ·  192.168.5.0/24  [isolated]" {
+  style.fill: "#fff7ed"
+  style.stroke: "#f97316"
+  style.border-radius: 8
+  style.stroke-dash: 4
+
+  zigbee1: "SLZB-06Mg24\n192.168.1.105\nZigbee coordinator" { style.fill: "#ffffff" }
+  zigbee2: "SLZB-06M\n192.168.1.110\nZigbee coordinator" { style.fill: "#ffffff" }
+  iot_note: "IoT devices\n(network-isolated)" {
+    shape: text
+    style.font-color: "#f97316"
+  }
+}
+
+core -> iot: "VLAN 3 (isolated)" {
+  style.stroke: "#f97316"
+  style.stroke-dash: 4
+}
+
+###############################################################
+# Security — VLAN 102 (cameras)
+###############################################################
+
+sw_2ndfl: "USW Lite-8-PoE\n2nd floor\n192.168.102.20" {
+  style.fill: "#065f46"
+  style.font-color: "#ffffff"
+  style.border-radius: 4
+}
+
+core -> sw_2ndfl: "VLAN 102 trunk" {
+  style.stroke: "#dc2626"
+}
+
+security: "Security  ·  VLAN 102  ·  192.168.102.0/24" {
+  style.fill: "#fff1f2"
+  style.stroke: "#dc2626"
+  style.border-radius: 8
+
+  u7raul: "U7 Lite — Raul\n192.168.102.24\n9 clients" { style.fill: "#ffffff" }
+  cam_fd: "front-door\n192.168.102.10" { style.fill: "#fee2e2" }
+  cam_nb: "to-northern-blvd\n192.168.102.27" { style.fill: "#fee2e2" }
+  cam_32: "to-32nd-ave\n192.168.102.31" { style.fill: "#fee2e2" }
+  cam_by: "back-yards\n192.168.102.32" { style.fill: "#fee2e2" }
+  cam_jg: "towards-johnny\n192.168.102.35" { style.fill: "#fee2e2" }
+  cam_gate: "cars-towards-gate\n192.168.102.40" { style.fill: "#fee2e2" }
+  nvr: "NVR\n192.168.102.50" {
+    style.fill: "#fecaca"
+    style.bold: true
+  }
+}
+
+sw_2ndfl -> security {
+  style.stroke: "#dc2626"
+}
+
+###############################################################
+# Additional access switches (hanging off core)
+###############################################################
+
+sw_ultra: "USW Ultra 60W\nBela area\n192.168.1.137" {
+  style.fill: "#065f46"
+  style.font-color: "#ffffff"
+  style.border-radius: 4
+}
+sw_lite: "USW Lite 8 PoE\n192.168.1.249" {
+  style.fill: "#065f46"
+  style.font-color: "#ffffff"
+  style.border-radius: 4
+}
+sw_flex: "USW Flex\n192.168.1.192" {
+  style.fill: "#065f46"
+  style.font-color: "#ffffff"
+  style.border-radius: 4
+}
+
+core -> sw_ultra
+core -> sw_lite
+core -> sw_flex

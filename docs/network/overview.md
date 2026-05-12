@@ -1,5 +1,9 @@
 # Network Overview
 
+![Network diagram](diagram.svg)
+
+> Source: [`diagram.d2`](diagram.d2) — render with `d2 diagram.d2 diagram.svg`
+
 ## Gateway
 
 **UniFi Dream Machine SE** — `192.168.1.1` (LAN) / `96.224.172.141` (WAN)
