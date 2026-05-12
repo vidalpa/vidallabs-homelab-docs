@@ -23,15 +23,17 @@ DNS: `swarm-mgr-01.local.vidallabs.com`, `swarm-wrk-01.local.vidallabs.com`, `sw
 
 ## Access
 
+- **Pulse (monitoring):** http://192.168.101.50:7655
 - **Portainer CE:** https://192.168.101.50:9443
 - **SSH:** `ssh linuxadmin@192.168.101.50` (manager)
 
 ## Running stacks
 
-| Stack | UI | Compose location |
-|-------|----|-----------------|
-| Portainer CE | https://192.168.101.50:9443 | `stacks/portainer/compose.yml` |
-| Jenkins | — | `stacks/jenkins/compose.yml` |
+| Stack | UI | Compose location | Notes |
+|-------|----|-----------------|-------|
+| Pulse | http://192.168.101.50:7655 | `stacks/pulse/compose.yml` | Proxmox + Docker monitoring — [setup runbook](../../runbooks/pulse-setup.md) |
+| Portainer CE | https://192.168.101.50:9443 | `stacks/portainer/compose.yml` | Swarm management UI |
+| Jenkins | — | `stacks/jenkins/compose.yml` | CI/CD |
 
 ## Day-to-day operations
 
@@ -42,6 +44,9 @@ cd vidallabs-docker-swarm
 
 make status              # Show swarm nodes and running services
 make redeploy-portainer  # Update Portainer
+make pulse               # Deploy Pulse monitoring
+make pulse-status        # Show Pulse service health
+make redeploy-pulse      # Pull latest Pulse image
 make redeploy            # Destroy and rebuild all VMs + redeploy
 ```
 

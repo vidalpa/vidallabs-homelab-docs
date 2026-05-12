@@ -37,6 +37,7 @@ Personal homelab documentation for the Vidallabs infrastructure — 3-node Proxm
 - [Provision a new VM](runbooks/new-vm.md)
 - [Rebuild cloud-init templates](runbooks/template-rebuild.md)
 - [Backup & restore](runbooks/backup-restore.md)
+- [Deploy Pulse monitoring](runbooks/pulse-setup.md)
 
 ## Infrastructure as code
 
