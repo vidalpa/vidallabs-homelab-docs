@@ -113,40 +113,59 @@ No bootstrap token setup wizard is required.
 
 ## Phase 4: Create agent API tokens
 
-Pulse v5.0.7+ requires a **unique API token per agent**.
+Pulse requires a **unique API token per agent**. Generate them from the Agents page (not API Tokens) to get the correct scope.
 
-1. In Pulse UI: **Settings → API Tokens → Create Token**
-2. Create **3 tokens**, one per swarm node:
+1. In Pulse UI: **Settings → Agents → Generate token**
+2. Create **3 tokens**, one per swarm node (enter name, click "Generate token", note the value, click "Generate another"):
    - `agent-swarm-mgr-01`
    - `agent-swarm-wrk-01`
    - `agent-swarm-wrk-02`
-3. Copy each token value.
+3. Copy each token value — it is shown in the install command on screen.
 
 ---
 
 ## Phase 5: Install the Pulse agent on each swarm node
 
-```bash
-# One token per node (created in Phase 4)
-make pulse-agents PULSE_TOKEN=token_mgr,token_wrk1,token_wrk2
+The install script is at `/install.sh` on the Pulse server (no auth required).
+
+### Access constraints
+
+- **swarm-mgr-01** (192.168.101.50): accessible via ghost002 root SSH chain
+- **swarm-wrk-01** (192.168.101.51, VMID 142 on ghost003): NOT accessible via SSH from ghost002. Use QEMU guest agent.
+- **swarm-wrk-02** (192.168.101.52, VMID 143 on ghost005): NOT accessible via SSH from ghost002. Use QEMU guest agent.
+- Windows → VLAN 101 routing is blocked at UniFi — no direct access from the management PC.
+
+### On swarm-mgr-01 (via ghost002 SSH hop)
+
+```powershell
+$pw = 'Qazwsx123$$'
+$hostkey = 'SHA256:AZxEAyJBHw32/oCH7xMX1OmnOK2rrTA/P6vdq7+ZXIg'
+$TOKEN = '<mgr-token>'
+& "C:\Program Files\PuTTY\plink.exe" -ssh root@192.168.1.2 -pw $pw -batch -hostkey $hostkey `
+  "ssh -o StrictHostKeyChecking=no -i /root/.ssh/id_rsa linuxadmin@192.168.101.50 'curl -fsSL http://192.168.101.50:7655/install.sh | sudo bash -s -- --url http://192.168.101.50:7655 --token $TOKEN --interval 30s'"
 ```
 
-Or manually on each node:
+### On swarm-wrk-01 (via QEMU guest agent on ghost003)
 
-```bash
-PULSE_URL="http://192.168.101.50:7655"
-
-# On swarm-mgr-01
-ssh linuxadmin@192.168.101.50 "curl -fsSL $PULSE_URL/install.sh | sudo bash -s -- --url $PULSE_URL --token <mgr-token> --interval 30s"
-
-# On swarm-wrk-01
-ssh linuxadmin@192.168.101.51 "curl -fsSL $PULSE_URL/install.sh | sudo bash -s -- --url $PULSE_URL --token <wrk1-token> --interval 30s"
-
-# On swarm-wrk-02
-ssh linuxadmin@192.168.101.52 "curl -fsSL $PULSE_URL/install.sh | sudo bash -s -- --url $PULSE_URL --token <wrk2-token> --interval 30s"
+```powershell
+$pw = 'Qazwsx123$$'
+$hostkey3 = 'SHA256:6XEPVSQXwYXasw0AJUDe8UX7HHZ0vBgoK3TC9545BVk'
+$TOKEN = '<wrk1-token>'
+& "C:\Program Files\PuTTY\plink.exe" -ssh root@192.168.1.3 -pw $pw -batch -hostkey $hostkey3 `
+  "qm guest exec 142 -- bash -c 'curl -fsSL http://192.168.101.50:7655/install.sh | bash -s -- --url http://192.168.101.50:7655 --token $TOKEN --interval 30s'"
 ```
 
-Verify in Pulse UI: **Settings → Agents** — each should show **Connected** within ~60 seconds.
+### On swarm-wrk-02 (via QEMU guest agent on ghost005)
+
+```powershell
+$pw = 'Qazwsx123$$'
+$hostkey5 = 'SHA256:0pQdk0xdqaSWroRLUOM0EgPJzSyBXkUzHV620OpX8+0'
+$TOKEN = '<wrk2-token>'
+& "C:\Program Files\PuTTY\plink.exe" -ssh root@192.168.1.6 -pw $pw -batch -hostkey $hostkey5 `
+  "qm guest exec 143 -- bash -c 'curl -fsSL http://192.168.101.50:7655/install.sh | bash -s -- --url http://192.168.101.50:7655 --token $TOKEN --interval 30s'"
+```
+
+Verify in Pulse UI: **Settings → Agents** — each should show **online** within ~60 seconds.
 
 ---
 
@@ -174,9 +193,10 @@ Verify in Pulse UI: **Settings → Agents** — each should show **Connected** w
 | Update to latest image | `make redeploy-pulse` |
 | Restart Pulse | `ssh linuxadmin@192.168.101.50 "docker service update --force pulse_pulse"` |
 | View Pulse logs | `ssh linuxadmin@192.168.101.50 "docker service logs -f pulse_pulse"` |
-| Check agent on a node | `ssh linuxadmin@192.168.101.51 "sudo systemctl status pulse-agent"` |
-| Restart agent | `ssh linuxadmin@192.168.101.51 "sudo systemctl restart pulse-agent"` |
-| Update agent | Re-run `setup-agents.sh` with existing tokens |
+| Check agent on mgr-01 | `plink ghost002 → ssh linuxadmin@192.168.101.50 "sudo systemctl status pulse-agent"` |
+| Check agent on wrk-01 | `plink root@192.168.1.3 → qm guest exec 142 -- systemctl status pulse-agent` |
+| Check agent on wrk-02 | `plink root@192.168.1.6 → qm guest exec 143 -- systemctl status pulse-agent` |
+| Update agent | Re-run Phase 5 install commands (installer upgrades in-place) |
 
 ---
 
