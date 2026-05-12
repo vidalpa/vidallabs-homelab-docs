@@ -42,6 +42,7 @@ Managed via Portainer or `docker stack deploy`. See [Docker Swarm](../docker-swa
 
 | Service | URL | Notes |
 |---------|-----|-------|
+| **Pulse** | http://192.168.101.50:7655 | Unified Proxmox + Docker monitoring — [setup runbook](../../runbooks/pulse-setup.md) |
 | Portainer CE | https://192.168.101.50:9443 | Swarm management UI |
 | Jenkins | — | CI/CD (Jenkins stack) |
 

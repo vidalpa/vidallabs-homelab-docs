@@ -11,6 +11,7 @@ Personal homelab documentation for the Vidallabs infrastructure — 3-node Proxm
 | Proxmox (ghost002) | https://192.168.1.2:8006 | |
 | Proxmox (ghost005) | https://192.168.1.6:8006 | |
 | Proxmox Datacenter Manager | https://192.168.100.121 | Cluster-wide view |
+| **Pulse** | http://192.168.101.50:7655 | Unified Proxmox + Docker monitoring |
 | Portainer | https://192.168.101.50:9443 | Docker Swarm UI |
 | Grafana | http://192.168.100.12 | Metrics dashboards |
 | phpIPAM | http://192.168.100.246 | IP address management |
